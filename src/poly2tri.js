@@ -450,6 +450,39 @@ Sweep.fill = function(tcx, node) {
     //tcx.removeNode(node);
 };
 
+function angleExceeds90Degrees(origin, pa, pb) {
+    var angle = Sweep.angle(origin, pa, pb);
+    var exceeds90Degrees = ((angle > PI_div2) || (angle < -PI_div2));
+    return exceeds90Degrees;
+}
+
+function angleExceedsPlus90DegreesOrIsNegative(origin, pa, pb) {
+    var angle = Sweep.angle(origin, pa, pb);
+    var exceedsPlus90DegreesOrIsNegative = (angle > PI_div2) || (angle < 0);
+    return exceedsPlus90DegreesOrIsNegative;
+}
+
+// True if HoleAngle exceeds 90 degrees.
+function largeHole_DontFill(node) {
+    var nextNode = node.next;
+    var prevNode = node.prev;
+    if (!angleExceeds90Degrees(node.point, nextNode.point, prevNode.point)) {
+        return false;
+    }
+    // Check additional points on front.
+    var next2Node = nextNode.next;
+    // "..Plus.." because only want angles on same side as point being added.
+    if (next2Node && !angleExceedsPlus90DegreesOrIsNegative(node.point, next2Node.point, prevNode.point)) {
+        return false;
+    }
+    var prev2Node = prevNode.prev;
+    // "..Plus.." because only want angles on same side as point being added.
+    if (prev2Node && !angleExceedsPlus90DegreesOrIsNegative(node.point, nextNode.point, prev2Node.point)) {
+        return false;
+    }
+    return true;
+}
+
 /**
  * Fills holes in the Advancing Front
  */
@@ -458,10 +491,9 @@ Sweep.fillAdvancingFront = function(tcx, n) {
     var node = n.next;
     var angle;
     while (node.next) {
-        // TODO integrate here changes from C++ version
-        // (C++ repo revision acf81f1f1764 dated April 7, 2012)
-        angle = Sweep.holeAngle(node);
-        if (angle > PI_div2 || angle < -(PI_div2)) {
+        // if HoleAngle exceeds 90 degrees then break.
+        // (patch contributed by ToolmakerSteve2 in issue #48)
+        if (largeHole_DontFill(node)) {
             break;
         }
         Sweep.fill(tcx, node);
@@ -471,10 +503,9 @@ Sweep.fillAdvancingFront = function(tcx, n) {
     // Fill left holes
     node = n.prev;
     while (node.prev) {
-        // TODO integrate here changes from C++ version
-        // (C++ repo revision acf81f1f1764 dated April 7, 2012)
-        angle = Sweep.holeAngle(node);
-        if (angle > PI_div2 || angle < -(PI_div2)) {
+        // if HoleAngle exceeds 90 degrees then break.
+        // (patch contributed by ToolmakerSteve2 in issue #48)
+        if (largeHole_DontFill(node)) {
             break;
         }
         Sweep.fill(tcx, node);
@@ -488,6 +519,27 @@ Sweep.fillAdvancingFront = function(tcx, n) {
             Sweep.fillBasin(tcx, n);
         }
     }
+};
+
+Sweep.angle = function(origin, pa, pb) {
+    /* Complex plane
+     * ab = cosA +i*sinA
+     * ab = (ax + ay*i)(bx + by*i) = (ax*bx + ay*by) + i(ax*by-ay*bx)
+     * atan2(y,x) computes the principal value of the argument function
+     * applied to the complex number x+iy
+     * Where x = ax*bx + ay*by
+     *       y = ax*by - ay*bx
+     */
+    var px = origin.x;
+    var py = origin.y;
+    var ax = pa.x - px;
+    var ay = pa.y - py;
+    var bx = pb.x - px;
+    var by = pb.y - py;
+    var x = ax * by - ay * bx;
+    var y = ax * bx + ay * by;
+    var angle = Math.atan2(x, y);
+    return angle;
 };
 
 /**
