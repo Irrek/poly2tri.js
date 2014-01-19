@@ -43,6 +43,8 @@
             {"name": "issue58.dat", "content": "Long losange", "triangles": 4},
             {"name": "issue79.dat", "triangles": 45},
             {"name": "issue79_1.dat", "triangles": 513},
+            {"name": "issue81.dat", "content": "Map indoor 2", "triangles": 50},
+            {"name": "issue81.dat", "content": "Map indoor 2", "holes": "issue81_holes.dat", "throws": "collinear not supported"},
             {"name": "issue88.dat", "holes": "issue88_hole.dat", "throws": "intersecting constraints"}
         ]
     },
